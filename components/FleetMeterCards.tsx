@@ -5,22 +5,27 @@ import type { FleetMeterSummary } from "@/lib/fleet";
 
 interface FleetMeterCardsProps {
   fleet: FleetMeterSummary[];
+  /** When this key changes, the list re-mounts and plays entrance animation (smooth transition on filter/sort). */
+  listKey?: string;
 }
 
-export default function FleetMeterCards({ fleet }: FleetMeterCardsProps) {
+export default function FleetMeterCards({ fleet, listKey = "default" }: FleetMeterCardsProps) {
   if (fleet.length === 0) {
     return (
-      <p className="py-8 text-center text-slate-400">No meters match your filters.</p>
+      <p className="py-8 text-center text-slate-400 animate-fade-in">
+        No meters match your filters.
+      </p>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {fleet.map((row) => (
+    <div key={listKey} className="flex flex-col gap-3">
+      {fleet.map((row, index) => (
         <Link
           key={row.meterId}
           href={`/meter/${row.meterId}`}
-          className="group flex items-center rounded-xl border border-slate-100 bg-white px-5 py-4 shadow-sm transition-all hover:border-teal-200 hover:shadow-md"
+          className="group flex items-center rounded-xl border border-slate-100 bg-white px-5 py-4 shadow-sm transition-all hover:border-teal-200 hover:shadow-md animate-fade-in"
+          style={{ animationDelay: `${index * 40}ms` }}
         >
           <div className="w-32 shrink-0">
             <span className="text-xs uppercase tracking-wider text-slate-400">Meter</span>
