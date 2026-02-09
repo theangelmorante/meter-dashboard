@@ -32,6 +32,11 @@ npm run test:run
 npm test
 ```
 
+## What the App Does (per spec)
+
+- **Fleet Overview** (landing): Stat cards (total meters, consumption, incidents), search/sort filters, and meter cards showing **ID**, **latest reading** (timestamp + volume), **total consumption**, and **status** — *active* if the meter reported in the last 2 hours.
+- **Meter Detail** (`/meter/[id]`): Hourly **bar chart** (Recharts) and **data table** with optional filter by flag (normal, gap estimated, counter reset).
+
 ## Project Structure
 
 ```
@@ -41,43 +46,54 @@ npm test
 │   └── meter/[id]/
 │       └── page.tsx             # Meter Detail page
 ├── components/
-│   ├── Header.tsx               # Shared header with company name
-│   ├── FleetView.tsx            # Fleet overview with cards and filters
-│   ├── MeterDetail.tsx          # Meter detail (2-col: chart + table)
-│   └── ConsumptionChart.tsx     # Recharts bar chart
+│   ├── Header.tsx               # Shared header
+│   ├── FleetView.tsx            # Fleet overview container
+│   ├── FleetStatCards.tsx       # Total meters, consumption, incidents
+│   ├── FleetFilterBar.tsx       # Search + sort
+│   ├── FleetMeterCards.tsx      # Meter cards (ID, latest, consumption, status)
+│   ├── FleetSkeleton.tsx        # Loading skeleton
+│   ├── EmptyState.tsx           # "No meters found" state
+│   ├── MeterDetail.tsx           # Detail layout (chart + table)
+│   ├── ConsumptionChart.tsx    # Recharts hourly bar chart
+│   ├── MeterDetailFilterBar.tsx # Flag filter for table
+│   └── MeterDetailTable.tsx     # Hourly data table
 ├── contexts/
-│   └── DataContext.tsx           # React context (no external deps)
+│   └── DataContext.tsx          # Processed data + fleet summary (no reprocessing)
 ├── hooks/
-│   ├── useFleetFilters.ts       # Fleet filtering/sorting logic
-│   └── useMeterDetailFilters.ts # Detail filtering/sorting logic
+│   ├── useFleetFilters.ts       # Fleet search/sort
+│   ├── useFleetStats.ts         # Fleet-wide stats
+│   └── useMeterDetailFilters.ts # Detail flag filter
 ├── lib/
-│   ├── processor.ts             # Core processing logic (pure function)
-│   ├── fleet.ts                 # Fleet summary builder
-│   ├── types.ts                 # TypeScript interfaces
-│   └── data.ts                  # Single source of truth (avoids reprocessing)
+│   ├── processor.ts             # Core processing (pure function, no React)
+│   ├── fleet.ts                 # Fleet summary + stats
+│   ├── types.ts                 # RawReading, ProcessedRecord
+│   └── data.ts                  # Single source of truth (readings → processed)
 ├── data/
-│   └── readings.json            # Provided sample data
+│   └── readings.json            # Sample raw readings
 ├── tests/
-│   └── processor.test.ts        # Unit tests (4 cases)
+│   └── processor.test.ts        # Unit tests (6 cases)
 └── README.md
 ```
 
 ## Processing Logic
 
-The processor (`lib/processor.ts`) is a **pure function** with no React or Next.js dependencies. It handles:
+The processor (`lib/processor.ts`) is a **pure function** with no React or Next.js dependencies. It uses three flags (per spec):
 
 | Case              | Rule                                                                 | Flag             |
 |-------------------|----------------------------------------------------------------------|------------------|
 | Normal delta      | `current - previous` cumulative volume                               | `normal`         |
 | Hourly bucketing  | Delta assigned to the earlier reading's hour                         | —                |
 | Gap handling      | Distribute consumption evenly across all missing hourly buckets      | `gap_estimated`  |
-| Counter reset     | If current < previous, delta = current value                         | `counter_reset`  |
+| Counter reset     | If current < previous: **physical reset** → delta = current volume   | `counter_reset`  |
+| 32-bit overflow   | If current < previous and previous ≥ 2³¹: delta = (MAX_32 − prev) + current; still flagged `counter_reset` | `counter_reset`  |
+
+So only **normal**, **gap_estimated**, and **counter_reset** appear in the UI; overflow is handled for correct consumption but not as a separate flag.
 
 ## Architecture Decisions
 
-- **No reprocessing**: Raw data is processed once in `lib/data.ts` at module level. A native React context (`DataProvider`) distributes the result to all client components — no data is recomputed across pages.
+- **No reprocessing**: Raw data is processed once in `lib/data.ts` at module level. A React context (`DataProvider`) distributes processed data and fleet summary to all client components.
 - **Logic outside components**: Filtering and sorting live in custom hooks (`useFleetFilters`, `useMeterDetailFilters`), keeping components focused on presentation.
 
 ## Tradeoff / Assumption
 
-I chose to compute the number of gap buckets based on the **hour-bucket difference** (i.e., the truncated start-of-hour of each reading) rather than the raw time difference divided by 3600. This means two readings like `10:07` and `14:02` produce exactly 4 buckets (10, 11, 12, 13) — matching the spec example — rather than ≈3.9 buckets from raw millisecond math. The tradeoff is that very short intervals near hour boundaries (e.g., `10:59` → `11:01`) are always treated as adjacent-hour normal deltas even though only 2 minutes apart, which seemed like the most intuitive behavior for an hourly dashboard.
+Gap bucket count is based on the **hour-bucket difference** (truncated start-of-hour of each reading), not raw time ÷ 3600. So e.g. `10:07` and `14:02` yield 4 buckets (10, 11, 12, 13). Very short spans across an hour boundary (e.g. `10:59` → `11:01`) are treated as one normal delta, which fits an hourly dashboard.
