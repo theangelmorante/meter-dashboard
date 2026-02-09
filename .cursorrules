@@ -1,0 +1,16 @@
+# ION Energy Solutions Assessment Rules
+
+- **Tech Stack**: Next.js (App Router), TypeScript, Tailwind CSS, Vitest.
+- **Project Goal**: Process raw meter readings into hourly consumption and display them in a dashboard.
+- **Core Logic**: `lib/processor.ts` must be a pure function. No React dependencies here.
+- **Business Rules**:
+    1. Delta: current - previous volume.
+    2. Gaps: Distribute consumption evenly across missing hours and flag as `gap_estimated`.
+    3. Counter Reset: If current < previous, delta = current. Flag as `counter_reset`.
+- **UI Requirements**:
+    - Fleet Overview: Table/Cards with ID, latest reading, total consumption, and status (active if reported in last 2h).
+    - Detail View: Hourly chart (use Recharts) and data table.
+- **Code Style**: 
+    - Use functional components and hooks.
+    - Clean, documented TypeScript interfaces.
+    - English only for code and comments.
