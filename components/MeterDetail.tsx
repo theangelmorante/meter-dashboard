@@ -53,7 +53,8 @@ export default function MeterDetail({ meterId }: MeterDetailProps) {
         Meter <span className="text-teal-700">{meterId}</span>
       </h1>
       <p className="mb-5 text-sm text-slate-500">
-        Hourly consumption overview — {meterRecords.length} records
+        Hourly consumption overview — {filtered.length} record{filtered.length !== 1 ? "s" : ""} shown
+        {filters.flag !== "all" && ` (filtered by ${filters.flag})`}
       </p>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -61,7 +62,13 @@ export default function MeterDetail({ meterId }: MeterDetailProps) {
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">
             Hourly Consumption
           </h2>
-          <ConsumptionChart records={meterRecords} />
+          {filtered.length === 0 ? (
+            <p className="flex h-[280px] items-center justify-center text-sm text-slate-400">
+              No records match the current filter.
+            </p>
+          ) : (
+            <ConsumptionChart records={filtered} />
+          )}
         </div>
 
         <div className="flex flex-col rounded-xl border border-slate-100 bg-white p-5 shadow-sm">

@@ -56,15 +56,14 @@ export interface FleetStats {
   incidentCount: number;
 }
 
-/** Total fleet consumption (gal) and count of gap_estimated + counter_reset + overflow events. */
+/** Total fleet consumption (gal) and count of gap_estimated + counter_reset events. */
 export function getFleetStats(processed: ProcessedRecord[]): FleetStats {
   let totalConsumption = 0;
   let incidentCount = 0;
 
   for (const p of processed) {
     totalConsumption += p.consumption;
-    if (p.flag === "gap_estimated" || p.flag === "counter_reset" || p.flag === "overflow")
-      incidentCount += 1;
+    if (p.flag === "gap_estimated" || p.flag === "counter_reset") incidentCount += 1;
   }
 
   return { totalConsumption, incidentCount };

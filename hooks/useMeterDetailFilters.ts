@@ -7,7 +7,7 @@ export type MeterDetailSortField = "hour" | "consumption" | "flag";
 type SortDir = "asc" | "desc";
 
 export interface MeterDetailFilters {
-  flag: "all" | "normal" | "gap_estimated" | "counter_reset" | "overflow";
+  flag: "all" | "normal" | "gap_estimated" | "counter_reset";
 }
 
 /**

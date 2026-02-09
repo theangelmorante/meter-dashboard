@@ -9,15 +9,14 @@ export interface RawReading {
 
 /**
  * Processed hourly consumption record.
- * The flag field indicates:
+ * The flag field indicates (per PDF):
  *  - "normal"         — standard delta between consecutive readings
  *  - "gap_estimated"  — consumption distributed across missing hourly buckets
- *  - "counter_reset"  — meter counter reset detected (current < previous, not overflow)
- *  - "overflow"       — 32-bit counter wrap-around detected; delta = (MAX − prev) + current
+ *  - "counter_reset"  — meter counter reset (or 32-bit overflow); delta = current or (MAX − prev) + current
  */
 export interface ProcessedRecord {
   meterId: string;
   hour: string; // ISO 8601 hour start (e.g. "2025-02-05T10:00:00Z")
   consumption: number;
-  flag: "normal" | "gap_estimated" | "counter_reset" | "overflow";
+  flag: "normal" | "gap_estimated" | "counter_reset";
 }

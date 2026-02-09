@@ -20,7 +20,6 @@ const FLAG_COLORS: Record<string, string> = {
   normal: "#0d9488",        // teal-600
   gap_estimated: "#f59e0b", // amber-500
   counter_reset: "#ef4444", // red-500
-  overflow: "#8b5cf6",     // violet-500
 };
 
 /**
@@ -49,10 +48,6 @@ export default function ConsumptionChart({ records }: ConsumptionChartProps) {
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: FLAG_COLORS.counter_reset }} />
           Counter Reset
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: FLAG_COLORS.overflow }} />
-          Overflow (32-bit)
         </span>
       </div>
 

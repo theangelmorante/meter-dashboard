@@ -83,14 +83,9 @@ function countBuckets(prevHour: string, currHour: string): number {
 
 // ─── Record builders ────────────────────────────────────────────────
 
-/** Builds a single counter-reset record (physical reset: delta = current volume). */
-function buildResetRecord(meterId: string, hour: string, currentVolume: number): ProcessedRecord {
-  return { meterId, hour, consumption: currentVolume, flag: "counter_reset" };
-}
-
-/** Builds a single overflow record (32-bit wrap: delta = (MAX − prev) + current). */
-function buildOverflowRecord(meterId: string, hour: string, delta: number): ProcessedRecord {
-  return { meterId, hour, consumption: delta, flag: "overflow" };
+/** Builds a single counter_reset record (consumption = current volume or overflow delta). */
+function buildCounterResetRecord(meterId: string, hour: string, consumption: number): ProcessedRecord {
+  return { meterId, hour, consumption, flag: "counter_reset" };
 }
 
 /** Builds a single normal-delta record. */
@@ -123,11 +118,10 @@ function processPair(prev: RawReading, curr: RawReading): ProcessedRecord[] {
   const currHour = toHourBucket(curr.timestamp);
 
   if (isCounterReset(prev, curr)) {
-    if (is32BitOverflow(prev, curr)) {
-      const delta = computeOverflowDelta(prev, curr);
-      return [buildOverflowRecord(prev.meterId, prevHour, delta)];
-    }
-    return [buildResetRecord(prev.meterId, prevHour, curr.cumulativeVolume)];
+    const consumption = is32BitOverflow(prev, curr)
+      ? computeOverflowDelta(prev, curr)
+      : curr.cumulativeVolume;
+    return [buildCounterResetRecord(prev.meterId, prevHour, consumption)];
   }
 
   const delta = curr.cumulativeVolume - prev.cumulativeVolume;

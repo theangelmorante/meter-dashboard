@@ -96,7 +96,7 @@ describe("processReadings", () => {
     });
   });
 
-  it("detects 32-bit overflow (wrap-around) and computes real delta: (MAX − prev) + current", () => {
+  it("detects 32-bit overflow (wrap-around), computes real delta (MAX − prev) + current, flags as counter_reset", () => {
     // Counter at 4,294,967,290 then wraps to 10. Real consumption = (4,294,967,295 − 4,294,967,290) + 10 = 15
     const readings: RawReading[] = [
       { meterId: "M1", timestamp: "2025-02-05T08:00:00Z", cumulativeVolume: 4_294_967_290 },
@@ -109,7 +109,7 @@ describe("processReadings", () => {
       meterId: "M1",
       hour: "2025-02-05T08:00:00Z",
       consumption: 15, // (4,294,967,295 - 4,294,967,290) + 10 = 5 + 10
-      flag: "overflow",
+      flag: "counter_reset", // per PDF: only three flags; overflow is handled but flagged as counter_reset
     });
   });
 

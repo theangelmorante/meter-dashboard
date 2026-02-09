@@ -40,7 +40,6 @@ export default function MeterDetailFilterBar({
         <option value="normal">Normal</option>
         <option value="gap_estimated">Gap Estimated</option>
         <option value="counter_reset">Counter Reset</option>
-        <option value="overflow">Overflow (32-bit)</option>
       </select>
 
       {(["hour", "consumption", "flag"] as const).map((field) => (
