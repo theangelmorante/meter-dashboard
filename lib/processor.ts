@@ -2,6 +2,15 @@ import type { ProcessedRecord, RawReading } from "./types";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
 
+/** Maximum value for a 32-bit unsigned integer. Counter wraps from this back to 0. */
+const MAX_32_BIT = 4_294_967_295;
+
+/**
+ * Threshold above which we consider the counter "high" and treat a decrease as overflow.
+ * Using half the 32-bit range: if previous >= this and current < previous, assume wrap-around.
+ */
+const OVERFLOW_THRESHOLD = 2_147_483_648;
+
 // ─── Small utility functions ────────────────────────────────────────
 
 /**
@@ -49,6 +58,24 @@ function isCounterReset(prev: RawReading, curr: RawReading): boolean {
   return curr.cumulativeVolume < prev.cumulativeVolume;
 }
 
+/**
+ * Returns true if the drop from prev to curr is likely a 32-bit wrap-around
+ * (counter was near max and wrapped to 0). Used when current < previous.
+ */
+function is32BitOverflow(prev: RawReading, curr: RawReading): boolean {
+  const p = prev.cumulativeVolume;
+  const c = curr.cumulativeVolume;
+  return c < p && p >= OVERFLOW_THRESHOLD;
+}
+
+/**
+ * Real consumption when a 32-bit overflow occurred: (MAX − previous) + current.
+ * Example: prev = 4,294,967,290, curr = 10 → (5 + 10) = 15.
+ */
+function computeOverflowDelta(prev: RawReading, curr: RawReading): number {
+  return (MAX_32_BIT - prev.cumulativeVolume) + curr.cumulativeVolume;
+}
+
 /** Returns how many hourly buckets separate two hour strings. */
 function countBuckets(prevHour: string, currHour: string): number {
   return (hourToMs(currHour) - hourToMs(prevHour)) / MS_PER_HOUR;
@@ -56,9 +83,14 @@ function countBuckets(prevHour: string, currHour: string): number {
 
 // ─── Record builders ────────────────────────────────────────────────
 
-/** Builds a single counter-reset record. */
+/** Builds a single counter-reset record (physical reset: delta = current volume). */
 function buildResetRecord(meterId: string, hour: string, currentVolume: number): ProcessedRecord {
   return { meterId, hour, consumption: currentVolume, flag: "counter_reset" };
+}
+
+/** Builds a single overflow record (32-bit wrap: delta = (MAX − prev) + current). */
+function buildOverflowRecord(meterId: string, hour: string, delta: number): ProcessedRecord {
+  return { meterId, hour, consumption: delta, flag: "overflow" };
 }
 
 /** Builds a single normal-delta record. */
@@ -91,6 +123,10 @@ function processPair(prev: RawReading, curr: RawReading): ProcessedRecord[] {
   const currHour = toHourBucket(curr.timestamp);
 
   if (isCounterReset(prev, curr)) {
+    if (is32BitOverflow(prev, curr)) {
+      const delta = computeOverflowDelta(prev, curr);
+      return [buildOverflowRecord(prev.meterId, prevHour, delta)];
+    }
     return [buildResetRecord(prev.meterId, prevHour, curr.cumulativeVolume)];
   }
 

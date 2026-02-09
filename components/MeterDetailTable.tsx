@@ -6,6 +6,7 @@ const FLAG_BADGE: Record<string, string> = {
   normal: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
   gap_estimated: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
   counter_reset: "bg-red-50 text-red-700 ring-1 ring-red-200",
+  overflow: "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
 };
 
 interface MeterDetailTableProps {

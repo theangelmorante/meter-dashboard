@@ -26,7 +26,7 @@ export default function FleetStatCards() {
         <p className="mt-1 text-2xl font-bold text-slate-800">
           {stats.incidentCount}
           <span className="ml-1 text-sm font-normal text-slate-500">
-            (gaps + counter resets)
+            (gaps, resets, overflows)
           </span>
         </p>
       </div>

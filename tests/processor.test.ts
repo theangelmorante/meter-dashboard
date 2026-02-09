@@ -96,6 +96,23 @@ describe("processReadings", () => {
     });
   });
 
+  it("detects 32-bit overflow (wrap-around) and computes real delta: (MAX − prev) + current", () => {
+    // Counter at 4,294,967,290 then wraps to 10. Real consumption = (4,294,967,295 − 4,294,967,290) + 10 = 15
+    const readings: RawReading[] = [
+      { meterId: "M1", timestamp: "2025-02-05T08:00:00Z", cumulativeVolume: 4_294_967_290 },
+      { meterId: "M1", timestamp: "2025-02-05T09:00:00Z", cumulativeVolume: 10 },
+    ];
+    const result = processReadings(readings);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      meterId: "M1",
+      hour: "2025-02-05T08:00:00Z",
+      consumption: 15, // (4,294,967,295 - 4,294,967,290) + 10 = 5 + 10
+      flag: "overflow",
+    });
+  });
+
   it("discards duplicate timestamps", () => {
     const readings: RawReading[] = [
       { meterId: "X", timestamp: "2025-01-01T08:00:00Z", cumulativeVolume: 100 },
